@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"  // Should match your structure
+}
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+model User {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  supabaseId  String    @unique // Links to Supabase Auth
+  email       String    @unique
+  resumes     Resume[]
+  jobs        Job[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Job {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  title       String    // Job title (e.g., "Senior Frontend Developer")
+  description String    // Full job description
+  company     String?
+  skills      String[]  // Extracted keywords (e.g., ["React", "Node.js"])
+  status      String    @default("active") // "active" | "archived"
+  resumes     Resume[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Resume {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  jobId       String?   // Optional: Links to a specific job application
+  job         Job?      @relation(fields: [jobId], references: [id])
+  original    String    // Raw extracted text from PDF/DOCX
+  tailored    String?   // AI-modified version
+  version     Int       @default(1)
+  fileUrl     String?   // S3/Storage URL if files are hosted
+  analysis    Json?     // Stores AI metrics (match %, suggestions)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId]) // Optimize queries by user
+  @@index([jobId])  // Optimize queries by job
+}
